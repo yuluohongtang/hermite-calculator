@@ -44,7 +44,3 @@ Rodrigues 记号：
 $$
 \frac{f^{(n)}}{f}=(-1)^n H_n,\qquad \frac{\varphi^{(n)}}{\varphi}=(-1)^n He_n
 $$
-
-## License
-
-MIT
