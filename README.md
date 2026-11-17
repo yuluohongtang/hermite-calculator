@@ -4,7 +4,7 @@
 
 ## 功能特性
 
-- **双约定可选**：物理学家版 $H_n$（权 $f(x)=e^{-x^2}$）与概率学家版 $He_n$（权 $\varphi(x)=\dfrac{1}{\sqrt{2\pi}}e^{-x^2/2}$，标准正态密度），两基满足 $He_n(x)=2^{-n/2}H_n\!\left(\dfrac{x}{\sqrt2}\right)$
+- **双约定可选**：物理学家版 $H_n$（权 $f(x)=e^{-x^2}$）与概率学家版 $He_n$（权 $\varphi(x)=\frac{1}{\sqrt{2\pi}}e^{-x^2/2}$，标准正态密度），两基满足 $He_n(x)=2^{-n/2}H_n\!\left(\frac{x}{\sqrt2}\right)$
 - **模式一：已知 $h(x)$**——输入阶数与各阶系数，精确有理运算，输出分数形式的埃尔米特展开系数、Rodrigues 基系数向量
 - **模式二：未知 $h(x)$**——输入数据点坐标，按梯形数值积分（笔记公式 III）逐阶估计 $\alpha_n$，还原完整多项式
 - **三级阶数提示**：点数充足无提示；每参数不足 2 点显示黄色警告；参数多于点数（欠定）显示红色提示，仍完整出结果
@@ -39,7 +39,11 @@ $$\alpha_n=\frac{\langle h,P_n\rangle_w}{\langle P_n,P_n\rangle_w},\qquad h(x)=\
 
 $$\alpha_n\approx\frac{\displaystyle\sum_{i=1}^{m-1}\frac{x_{i+1}-x_i}{2}\left[y_{i+1}P_n(x_{i+1})+y_iP_n(x_i)\right]w_i}{\displaystyle\sum_{i=1}^{m-1}\frac{x_{i+1}-x_i}{2}\left[P_n^2(x_{i+1})+P_n^2(x_i)\right]w_i}$$
 
-Rodrigues 记号：$\dfrac{f^{(n)}}{f}=(-1)^nH_n$，$\dfrac{\varphi^{(n)}}{\varphi}=(-1)^nHe_n$。
+Rodrigues 记号：
+
+$$
+\frac{f^{(n)}}{f}=(-1)^n H_n,\qquad \frac{\varphi^{(n)}}{\varphi}=(-1)^n He_n
+$$
 
 ## License
 
