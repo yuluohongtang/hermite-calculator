@@ -47,6 +47,23 @@
   }
   input:focus,textarea:focus{border-color:var(--accent); box-shadow:0 0 0 3px rgba(37,99,235,.15);}
   textarea{width:100%; max-width:420px;}
+  .genbox{max-width:620px; margin:12px 0 6px; padding:11px 13px;
+          border:1px dashed #94a3b8; border-radius:11px; background:var(--bg);}
+  .genbox .grow{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:7px 0;}
+  .genbox input[type=number]{width:104px;}
+  .genbox input[type=checkbox]{width:auto; margin-right:4px;}
+  .genbox select{border:1px solid #cbd5e1; border-radius:8px; padding:7px 10px;
+                 font-size:14px; font-family:inherit; background:#fff; color:var(--ink);}
+  .genbox .gen-msg{font-size:13px; line-height:1.55; margin:7px 0 0;}
+  .genbox .gen-msg.err{color:var(--red);}
+  .genbox .gen-msg.ok{color:#166534;}
+  .genbox .inline-hint{font-size:12.5px; color:var(--sub); margin:0; flex-basis:100%;}
+  .genbox .range-fields.off{opacity:.62;}
+  .genbox .range-fields.off input[type=number]{background:#f1f5f9;}
+  .prog-wrap{margin:10px 0 4px;}
+  .prog-meta{display:flex; justify-content:space-between; gap:12px; font-size:13px; color:var(--sub); margin-bottom:4px;}
+  .prog-wrap progress{width:100%; height:14px; accent-color:var(--accent);}
+  .btn:disabled{opacity:.62; cursor:not-allowed;}
   .coeff-row{display:flex; align-items:center; gap:8px; margin:6px 0; flex-wrap:wrap;}
   .coeff-row input{width:150px;}
   .btn{
@@ -64,13 +81,21 @@
   .formula .cap{display:block; font-size:13px; color:var(--sub); margin-bottom:2px;}
   .mj{margin:4px 0; overflow-x:auto;}
   .mj mjx-container{min-width:0;}
+  .formula.coef-scroll .mj{max-height:420px; overflow:auto; padding:2px 8px 4px 0;}
   table{border-collapse:collapse; margin:10px 0; font-size:13.5px;}
-  th,td{border:1px solid var(--line); padding:6px 12px; text-align:center;}
+  th,td{border:1px solid var(--line); padding:6px 12px; text-align:center; white-space:nowrap;}
   th{background:var(--bg);}
+  .table-scroll{max-height:380px; overflow:auto; border:1px solid var(--line); border-radius:10px; margin:12px 0;}
+  .table-scroll table{margin:0;}
+  .table-scroll thead th{position:sticky; top:0; z-index:1; box-shadow:inset 0 -1px 0 var(--line);}
   .err{color:var(--red); font-size:14px; margin:10px 0;}
   .warn{border-radius:10px; padding:10px 14px; margin:10px 0; font-size:13.5px;}
   .warn.caution{background:#fef3c7; border:1px solid #f59e0b; color:#92400e;}
   .warn.danger{background:#fee2e2; border:1px solid #ef4444; color:#991b1b;}
+  .stop{border-radius:10px; padding:10px 14px; margin:10px 0; font-size:13.5px; line-height:1.6;}
+  .stop.ok{background:#dcfce7; border:1px solid #22c55e; color:#166534;}
+  .stop.info{background:#eff6ff; border:1px solid #3b82f6; color:#1e3a8a;}
+  .stop.caution2{background:#fef3c7; border:1px solid #f59e0b; color:#92400e;}
   canvas{max-width:100%; border:1px solid var(--line); border-radius:10px; background:#fff;}
 </style>
 <script>
@@ -102,6 +127,16 @@ window.MathJax = {
     于是 h(x) = Σ α<sub>n</sub> P<sub>n</sub>(x)。Rodrigues 基系数向量同时给出。
   </div>
 
+  <div class="term">
+    <b>停机指标 Δ<sub>n</sub>（模式二，与公式 III 同一套节点梯形口径）：</b>
+    部分和 P<sub>n</sub>(x) = Σ<sub>j=0</sub><sup>n</sup> α<sub>j</sub>B<sub>j</sub>(x)（B<sub>j</sub> 取 H<sub>j</sub> 或 He<sub>j</sub>），
+    Δ<sub>n</sub> = ‖P<sub>n</sub>−P<sub>n−1</sub>‖<sub>w</sub> / ‖P<sub>n</sub>‖<sub>w</sub>
+    = ‖α<sub>n</sub>B<sub>n</sub>‖<sub>w</sub> / ‖P<sub>n</sub>‖<sub>w</sub>（n≥1，Δ<sub>0</sub> 无定义）；
+    分子分母两个加权平方积分都在数据节点上梯形求和。课堂阈值 Δ<sub>N</sub>&lt;0.05 时可停止加阶、取 φ≈P<sub>N</sub>；
+    Δ<sub>n</sub> 是开根号后的范数比（Δ<sub>n</sub><sup>2</sup> 才是能量比），欠定情形停机信号仅供演示，需结合 SSE 与点数警告。
+    <br>平方差展开时会出现老师红笔中的<b>乘积交叉项（不平方）</b>：∫(P<sub>n</sub>−P<sub>n−1</sub>)²w = ∫P<sub>n</sub>²w − 2∫P<sub>n</sub>P<sub>n−1</sub>w + ∫P<sub>n−1</sub>²w；单独的 ∫P<sub>n</sub>P<sub>n−1</sub>w 只是交叉内积项，不是 Δ 的分子。
+  </div>
+
   <div class="tabbtns">
     <button id="tab1btn" class="active" type="button">模式一：已知 h 多项式</button>
     <button id="tab2btn" type="button">模式二：已知数据点</button>
@@ -130,12 +165,44 @@ window.MathJax = {
 1.83, 4.105
 3.14, 2.891
 4.72, 1.634</textarea>
+
+      <div class="genbox" id="genBox">
+        <div class="grow">
+          <b>随机生成测试点</b>
+          <label>点数
+            <input type="number" id="genCount" min="2" max="20000" step="1" placeholder="必填，如 20">
+          </label>
+          <button class="btn ghost" id="genPoints" type="button">生成随机点</button>
+        </div>
+        <div class="grow range-fields off" id="genRangeFields">
+          <label><input type="checkbox" id="genRangeOn">限定坐标范围</label>
+          <label>最小值 <input type="number" id="genMin" step="any" value="-2" placeholder="点此填写并自动勾选"></label>
+          <label>最大值 <input type="number" id="genMax" step="any" value="3" placeholder="点此填写并自动勾选"></label>
+        </div>
+        <div class="grow">
+          <label>顺序
+            <select id="genOrder">
+              <option value="none">不排序（随机顺序）</option>
+              <option value="asc" selected>按 x 递增</option>
+              <option value="desc">按 x 递减</option>
+            </select>
+          </label>
+          <p class="inline-hint">点数范围 2–20000。不勾范围：x、y 均按标准正态 N(0,1) 生成（无硬边界）；勾选范围：x、y 均在 [最小值, 最大值] 内均匀随机。直接点击最小值/最大值输入框会自动勾选范围；选“递减”只改变填入文本框的顺序，点击计算后程序仍会自动按 x 升序排序。</p>
+        </div>
+        <p class="gen-msg" id="genMsg" role="status" aria-live="polite"></p>
+      </div>
+
       <p style="margin:12px 0 4px">
         <label>最高阶 N：
           <input type="number" id="orderN" min="0" max="20" value="4" style="width:90px">
         </label>
       </p>
+      <p class="hint">课堂演示版当前稳定支持 <b>N≤20</b>；输入更高阶（例如 1000 阶）会被拦截并提示。高阶 Hermite 系数和普通多项式会快速变长，且浮点递推容易溢出/振荡；真要支持 1000 阶，后续需改成分页/虚拟滚动、结果导出和更稳定的数值实现。数据点很多时，下方残差表已固定高度滚动。</p>
       <button class="btn" id="run2" type="button">计算完整多项式</button>
+      <div class="prog-wrap" id="prog2Wrap" hidden>
+        <div class="prog-meta"><span id="prog2Label">准备计算…</span><span id="prog2Pct">0%</span></div>
+        <progress id="prog2Bar" max="100" value="0"></progress>
+      </div>
       <div id="res2"></div>
     </div>
   </div>
@@ -283,6 +350,32 @@ function trapezoidAlpha(xv, yv, N, conv){
   }
   return { alpha, Hv };
 }
+/* 课堂 Truncation Rule（老师白板口径）：节点梯形范数下的相对增量
+   Delta_n = ||P_n-P_{n-1}||_w / ||P_n||_w，其中 P_n-P_{n-1}=alpha_n*H_n(x) */
+function trapezoidDelta(xv, Hv, alpha, conv){
+  const N = alpha.length - 1;
+  const w = xv.map(x => conv.weight(x));
+  const out = new Array(N + 1).fill(NaN);
+  const Pn = new Array(xv.length).fill(0);
+  const trap = g => {
+    let s = 0;
+    for (let i = 0; i < xv.length - 1; i++){
+      const dx2 = (xv[i + 1] - xv[i]) / 2;
+      s += dx2 * (g[i + 1] + g[i]);
+    }
+    return s;
+  };
+  for (let n = 0; n <= N; n++){
+    for (let i = 0; i < xv.length; i++) Pn[i] += alpha[n] * Hv[n][i];
+    if (n >= 1){
+      const dP2 = xv.map((_, i) => (alpha[n] * Hv[n][i]) ** 2 * w[i]);
+      const pn2 = Pn.map((v, i) => v * v * w[i]);
+      const num = trap(dP2), den = trap(pn2);
+      out[n] = den > 0 ? Math.sqrt(num / den) : NaN;
+    }
+  }
+  return out;
+}
 function expandNumeric(alpha, conv){
   const arrs = hermiteNumArrays(alpha.length - 1, conv);
   const L = Math.max(...arrs.map(a => a.length));
@@ -424,6 +517,23 @@ function staticTrapTex(conv){
       \\sum_{i=1}^{m-1}\\frac{x_{i+1}-x_i}{2}
         \\left[${b}_n^2(x_{i+1})${w1}+${b}_n^2(x_i)${w0}\\right]}`;
 }
+/* 停机指标 Δ_n 的节点梯形离散公式（与 staticTrapTex 同节点、同权重、同梯形口径） */
+function staticDeltaTex(conv){
+  const b = conv.bname;
+  const w1 = conv.nodeW('i+1'), w0 = conv.nodeW('i');
+  return `\\Delta_n \\approx \\sqrt{\\frac{
+      \\sum_{i=1}^{m-1}\\frac{x_{i+1}-x_i}{2}
+        \\left[(\\alpha_n ${b}_n(x_{i+1}))^2${w1}+(\\alpha_n ${b}_n(x_i))^2${w0}\\right]}{
+      \\sum_{i=1}^{m-1}\\frac{x_{i+1}-x_i}{2}
+        \\left[P_n(x_{i+1})^2${w1}+P_n(x_i)^2${w0}\\right]}}`;
+}
+/* Δ_n 连续积分形式：范数定义 + 平方差展开（展示老师红笔中的 P_n P_{n-1} 乘积交叉项） */
+function staticDeltaIntegralTex(conv){
+  return `\\begin{aligned}
+    \\Delta_n &= \\sqrt{\\frac{\\int_a^b (P_n-P_{n-1})^2 w(x)\\,dx}{\\int_a^b P_n^2(x)w(x)\\,dx}} \\\\
+    &= \\sqrt{\\frac{\\int_a^b [P_n^2(x)-2P_n(x)P_{n-1}(x)+P_{n-1}^2(x)]w(x)\\,dx}{\\int_a^b P_n^2(x)w(x)\\,dx}}
+    \\end{aligned}`;
+}
 
 /* ---------------- 三级阶数提示 ---------------- */
 function orderWarning(m, N){
@@ -439,9 +549,40 @@ function orderWarning(m, N){
   return { level: 'ok', text: '' };
 }
 
+/* ---------------- 课堂 0.05 稳定性停机提示（Delta_n） ---------------- */
+function stopBanner(delta, N, level, threshold = 0.05){
+  if (N < 1 || !delta || N >= delta.length || !Number.isFinite(delta[N])) return '';
+  const dN = delta[N];
+  let first = null;
+  for (let n = 1; n <= N; n++){
+    if (Number.isFinite(delta[n]) && delta[n] < threshold){ first = n; break; }
+  }
+  const cross = (first === null || first === N) ? '' :
+    ` 当前 1–${N} 范围内 Δ<sub>n</sub> 首次低于 ${threshold.toFixed(2)} 出现在 n=${first}；` +
+    `稀疏节点下高阶可能反弹，逐阶增加时建议连续两阶低于阈值再停止。`;
+  let cls, head;
+  if (dN < threshold){
+    if (level === 'danger'){
+      cls = 'caution2';
+      head = `Δ<sub>${N}</sub> = ${dN.toFixed(6)} &lt; ${threshold.toFixed(2)}，形式上达到课堂停机阈值；` +
+             `但当前为红色欠定情形（参数多于点数），该停机信号不稳定、结果仅作演示，建议先增加数据点。`;
+    } else {
+      cls = 'ok';
+      head = `Δ<sub>${N}</sub> = ${dN.toFixed(6)} &lt; ${threshold.toFixed(2)}：相邻两阶部分和在节点梯形加权范数下的` +
+             `相对变化已小于 5%，按课堂 Truncation Rule（stability of P<sub>n</sub>）可在此阶停止，` +
+             `取 φ ≈ P<sub>${N}</sub>；请同时参考 SSE、残差表与点数警告。`;
+    }
+  } else {
+    cls = 'info';
+    head = `Δ<sub>${N}</sub> = ${dN.toFixed(6)} ≥ ${threshold.toFixed(2)}：第 ${N} 阶相对增量仍不小于 5%，` +
+           `按稳定性准则可继续提高阶数观察；若同时出现黄/红点数警告、SSE 反弹或高阶振荡，应综合判断，不要盲目加阶。`;
+  }
+  return `<div class="stop ${cls}">${head}${cross}</div>`;
+}
+
 /* ---------------- 输出块与 MathJax 排版 ---------------- */
-function block(cap, tex){
-  return `<div class="formula"><span class="cap">${cap}</span>
+function block(cap, tex, extraClass = ''){
+  return `<div class="formula ${extraClass}"><span class="cap">${cap}</span>
           <div class="mj">$$${tex}$$</div></div>`;
 }
 function typeset(el){
@@ -458,18 +599,17 @@ function drawPlot(canvas, xv, yv, alpha, N, conv){
   const ctx = canvas.getContext('2d');
   const W = 760, H = 340, padL = 52, padR = 18, padT = 18, padB = 40;
   canvas.width = W; canvas.height = H;
-  const xmin = Math.min(...xv), xmax = Math.max(...xv);
+  let xmin = Infinity, xmax = -Infinity;
+  for (const x of xv){ if (x < xmin) xmin = x; if (x > xmax) xmax = x; }
   const grid = [];
   for (let i = 0; i <= 300; i++) grid.push(xmin + (xmax - xmin) * i / 300);
   const Hg = hermiteValues(grid, N, conv);
   const yfitG = grid.map((_, i) => {
     let s = 0; for (let n = 0; n <= N; n++) s += alpha[n] * Hg[n][i]; return s;
   });
-  const HvN = hermiteValues(xv, N, conv);
-  const yfitN = xv.map((_, i) => {
-    let s = 0; for (let n = 0; n <= N; n++) s += alpha[n] * HvN[n][i]; return s;
-  });
-  let ylo = Math.min(...yv, ...yfitG), yhi = Math.max(...yv, ...yfitG);
+  let ylo = Infinity, yhi = -Infinity;
+  for (const y of yv){ if (y < ylo) ylo = y; if (y > yhi) yhi = y; }
+  for (const y of yfitG){ if (y < ylo) ylo = y; if (y > yhi) yhi = y; }
   const ypad = (yhi - ylo) * .08 || 1;
   ylo -= ypad; yhi += ypad;
   const sx = x => padL + (x - xmin) / (xmax - xmin) * (W - padL - padR);
@@ -497,9 +637,14 @@ function drawPlot(canvas, xv, yv, alpha, N, conv){
   grid.forEach((x, i) => { i ? ctx.lineTo(sx(x), sy(yfitG[i])) : ctx.moveTo(sx(x), sy(yfitG[i])); });
   ctx.stroke();
   ctx.fillStyle = '#dc263b';
-  xv.forEach((x, i) => {
-    ctx.beginPath(); ctx.arc(sx(x), sy(yv[i]), 5, 0, Math.PI * 2); ctx.fill();
-  });
+  if (xv.length > 1500){
+    const r = 1.7;
+    xv.forEach((x, i) => ctx.fillRect(sx(x) - r, sy(yv[i]) - r, 2 * r, 2 * r));
+  } else {
+    xv.forEach((x, i) => {
+      ctx.beginPath(); ctx.arc(sx(x), sy(yv[i]), 5, 0, Math.PI * 2); ctx.fill();
+    });
+  }
   ctx.fillStyle = '#374151'; ctx.font = '12px Segoe UI';
   ctx.strokeStyle = '#2563eb'; ctx.beginPath(); ctx.moveTo(W - 150, 22); ctx.lineTo(W - 122, 22); ctx.stroke();
   ctx.fillText('F(x) 拟合曲线', W - 116, 26);
@@ -617,21 +762,62 @@ function parsePoints(text){
   return { xv: xs, yv: pts.map(p => p[1]) };
 }
 
-function runMode2(){
+const yieldToUI = () => new Promise(resolve => setTimeout(resolve, 0));
+function setMode2Progress(pct, label){
+  const wrap = document.getElementById('prog2Wrap');
+  const bar = document.getElementById('prog2Bar');
+  wrap.hidden = false;
+  bar.value = Math.max(0, Math.min(100, pct));
+  document.getElementById('prog2Pct').textContent = `${Math.round(bar.value)}%`;
+  if (label) document.getElementById('prog2Label').textContent = label;
+}
+function hideMode2Progress(delay = 550){
+  setTimeout(() => { document.getElementById('prog2Wrap').hidden = true; }, delay);
+}
+async function runMode2(){
   const res = document.getElementById('res2');
+  const runBtn = document.getElementById('run2');
+  runBtn.disabled = true;
+  setMode2Progress(2, '解析输入点…');
+  await yieldToUI();
   try {
     const { xv, yv } = parsePoints(document.getElementById('points').value);
     const N = parseInt(document.getElementById('orderN').value, 10);
     const m = xv.length;
     if (isNaN(N) || N < 0) throw new Error('最高阶 N 无效');
+    if (N > 20) {
+      throw new Error('当前课堂演示版稳定支持最高 N=20；N=' + N +
+        ' 会生成超长系数表与多项式，且高阶 Hermite 数值容易溢出或振荡。1000 阶场景需要虚拟滚动、结果导出和更稳定的数值实现，当前未开放；建议先用 Δₙ<0.05 在低阶停止。');
+    }
     const conv = CONV[convName];
     const w = orderWarning(m, N);
+    setMode2Progress(12, '梯形积分计算 αₙ…');
+    await yieldToUI();
     const { alpha, Hv } = trapezoidAlpha(xv, yv, N, conv);
+    setMode2Progress(38, '计算 Δₙ 稳定性增量…');
+    await yieldToUI();
+    const delta = trapezoidDelta(xv, Hv, alpha, conv);
+    setMode2Progress(55, '合并标准多项式…');
+    await yieldToUI();
     const c = expandNumeric(alpha, conv);
     const warn = w.level === 'ok' ? '' :
       `<div class="warn ${w.level}">${w.text}</div>`;
     let html = warn + block('笔记公式 III：梯形数值积分（在节点区间 [x_1, x_m] 上近似全空间积分）',
       staticTrapTex(conv));
+    html += block('停机指标 Δ<sub>n</sub> 的连续积分形式（老师蓝笔范数定义；理论区间为全实轴，程序在数据区间上梯形近似）',
+      staticDeltaIntegralTex(conv));
+    html += block('Δ<sub>n</sub> 节点梯形离散公式（上面积分形式在数据节点上的可计算版，与公式 III 同口径；n≥1，Δ₀ 无定义）。其中 '
+      + 'P<sub>n</sub>(x)=Σ<sub>j=0</sub><sup>n</sup> α<sub>j</sub>B<sub>j</sub>(x)，'
+      + 'P<sub>n</sub>−P<sub>n−1</sub>=α<sub>n</sub>B<sub>n</sub>（B 按当前约定取 ' + conv.bname + '）',
+      staticDeltaTex(conv));
+    html += '<p class="hint">板书红笔“i.e.”对照：老师在演算区积分号里写过 P<sub>n</sub>(x)·P<sub>n−1</sub>(x)·w(x)（相乘、无平方）；'
+      + '它的正确位置是上面平方差展开中的交叉项 −2∫P<sub>n</sub>P<sub>n−1</sub>w dx。若把红笔理解成单独的根号乘积式 '
+      + '√(∫P<sub>n</sub>P<sub>n−1</sub>w dx / ∫P<sub>n</sub>²w dx)，它与蓝笔范数定义不等价（精确正交时 '
+      + '∫P<sub>n</sub>P<sub>n−1</sub>w = ‖P<sub>n−1</sub>‖²，比值随 n 趋近 1，不能度量相邻阶变化量）；默认 6 点数据按节点梯形复算约为 '
+      + '0.722 / 0.971 / 0.998 / 0.997 / 1.001，对不上白板左侧 0.506050 / 0.123712 / 0.092488 / 0.042527 / 0.021085。'
+      + '本工具第三列采用与白板数值逐一吻合的差平方范数口径，建议课上与老师核对红笔原式；若老师确认乘积根号式可再切换。</p>';
+    setMode2Progress(64, '计算各点拟合值与系数行…');
+    await yieldToUI();
     const yfit = xv.map((_, i) => {
       let s = 0; for (let n = 0; n <= N; n++) s += alpha[n] * Hv[n][i]; return s;
     });
@@ -645,30 +831,149 @@ function runMode2(){
       }
       if (n >= 1){
         row += `, & \\Delta\\alpha_{${n}} &= ${fmtNum(v - alpha[n - 1])}`;
+        const dn = delta[n];
+        const dnTex = Number.isFinite(dn) ? fmtNum(dn, 6) : '\\text{--}';
+        row += `, & \\Delta_{${n}} &= ${dnTex}`;
       }
       return row;
     }).join(' \\\\ ');
-    html += block('埃尔米特展开系数与一阶差分（小数与近似分数）',
-      `\\begin{aligned} ${aRows} \\end{aligned}`);
+    html += `<p class="hint">每行三列对齐：α<sub>n</sub> 为展开系数；Δα<sub>n</sub>=α<sub>n</sub>−α<sub>n−1</sub> 是系数一阶差分；` +
+            `Δ<sub>n</sub>=‖P<sub>n</sub>−P<sub>n−1</sub>‖<sub>w</sub>/‖P<sub>n</sub>‖<sub>w</sub> 是课堂停机准则的加权范数相对增量` +
+            `（在数据节点上梯形积分，n≥1）；当前最高阶满足 Δ<sub>N</sub>&lt;0.05 时，系数表下方给出可停止提示。</p>`;
+    html += block('埃尔米特展开系数、Δα 一阶差分与 Δₙ 稳定性增量（系数区可上下滚动；小数与近似分数）',
+      `\\begin{aligned} ${aRows} \\end{aligned}`, 'coef-scroll');
+    html += stopBanner(delta, N, w.level);
     const sse = yfit.reduce((s, fv, i) => s + (yv[i] - fv) ** 2, 0);
-    html += block('平方损失和（SSE）',
-      `\\mathrm{SSE} = \\sum_{i=1}^{m}(y_i-F(x_i))^2 = ${fmtNum(sse)}`);
+    const mse = sse / m;
+    html += block('平方损失指标：SSE 与 MSE（MSE = SSE / 样本点数）',
+      `\\begin{aligned} \\mathrm{SSE} &= \\sum_{i=1}^{m}(y_i-F(x_i))^2 = ${fmtNum(sse)}, \\\\
+       \\mathrm{MSE} &= \\frac{1}{m}\\sum_{i=1}^{m}(y_i-F(x_i))^2 = \\frac{\\mathrm{SSE}}{m} = ${fmtNum(mse)} \\end{aligned}`);
     html += block('埃尔米特形式（分数为近似值）', `F(x) = ${hermiteTex(alpha, conv, false)}`);
     html += block('标准多项式形式（分数为近似值）', `F(x) = ${standardTex(c, false)}`);
-    html += `<table><tr><th>i</th><th>x<sub>i</sub></th><th>y<sub>i</sub></th><th>F(x<sub>i</sub>)</th><th>残差</th></tr>`;
+    const tableParts = [`<div class="table-scroll"><table><thead><tr>
+      <th>i</th><th>x<sub>i</sub></th><th>y<sub>i</sub></th><th>F(x<sub>i</sub>)</th><th>残差</th>
+    </tr></thead><tbody>`];
+    const tableChunk = m > 500 ? 1000 : m;
     for (let i = 0; i < m; i++){
-      html += `<tr><td>${i + 1}</td><td>${xv[i]}</td><td>${yv[i]}</td>
-               <td>${fmtTbl(yfit[i])}</td><td>${fmtTbl(yv[i] - yfit[i])}</td></tr>`;
+      tableParts.push(`<tr><td>${i + 1}</td><td>${xv[i]}</td><td>${yv[i]}</td>
+               <td>${fmtTbl(yfit[i])}</td><td>${fmtTbl(yv[i] - yfit[i])}</td></tr>`);
+      if ((i + 1) % tableChunk === 0 || i === m - 1){
+        setMode2Progress(70 + 22 * (i + 1) / m, `生成可滚动残差表 ${i + 1}/${m}`);
+        await yieldToUI();
+      }
     }
-    html += `</table><canvas id="plot2"></canvas>`;
+    tableParts.push('</tbody></table></div>');
+    html += tableParts.join('') + `<canvas id="plot2"></canvas>`;
+    setMode2Progress(94, '渲染公式、残差表与拟合图…');
+    await yieldToUI();
     res.innerHTML = html;
     typeset(res);
     drawPlot(document.getElementById('plot2'), xv, yv, alpha, N, conv);
+    setMode2Progress(100, `完成：${m} 个点、最高阶 N=${N}`);
+    hideMode2Progress(650);
   } catch (e){
+    document.getElementById('prog2Wrap').hidden = true;
     res.innerHTML = `<div class="err">输入有误：${e.message}</div>`;
+  } finally {
+    runBtn.disabled = false;
   }
 }
 document.getElementById('run2').addEventListener('click', runMode2);
+
+/* ---------------- 模式二：随机点生成器（只填入文本框，不自动计算） ---------------- */
+function setGenMsg(text, ok){
+  const el = document.getElementById('genMsg');
+  el.textContent = text || '';
+  el.className = 'gen-msg' + (text ? (ok ? ' ok' : ' err') : '');
+}
+function syncGenRangeInputs(){
+  const on = document.getElementById('genRangeOn').checked;
+  const fieldBox = document.getElementById('genRangeFields');
+  fieldBox.classList.toggle('off', !on);
+  document.getElementById('genMin').setAttribute('aria-disabled', String(!on));
+  document.getElementById('genMax').setAttribute('aria-disabled', String(!on));
+  if (!on) setGenMsg('');
+}
+function autoEnableGenRange(){
+  const box = document.getElementById('genRangeOn');
+  if (!box.checked){
+    box.checked = true;
+    syncGenRangeInputs();
+  }
+}
+function gaussianRandom(){
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+function sampleUniqueX(count, sampler){
+  const xs = [], seen = new Set();
+  let guard = 0;
+  const maxTries = count * 200 + 1000;
+  while (xs.length < count){
+    const x = sampler();
+    const key = Number.isFinite(x) ? x.toFixed(6) : String(x);
+    guard += 1;
+    if (Number.isFinite(x) && !seen.has(key)){
+      seen.add(key);
+      xs.push(x);
+      continue;
+    }
+    if (guard > maxTries){
+      throw new Error('无法生成足够的不重复 x：请扩大坐标范围、减少点数后重试');
+    }
+  }
+  return xs;
+}
+function generateRandomPoints(){
+  try {
+    const rawCount = document.getElementById('genCount').value.trim();
+    if (rawCount === '') throw new Error('请先输入点数量，再点生成');
+    const m = Number(rawCount);
+    if (!Number.isInteger(m) || m < 2) throw new Error('点数量必须是 ≥2 的整数（至少 2 个点才能进入模式二）');
+    if (m > 20000) throw new Error('单次最多生成 20000 个点；更多点建议分批生成或直接粘贴数据');
+
+    const rangeOn = document.getElementById('genRangeOn').checked;
+    let xSampler, ySampler, rangeText;
+    if (rangeOn){
+      const loRaw = document.getElementById('genMin').value.trim();
+      const hiRaw = document.getElementById('genMax').value.trim();
+      if (loRaw === '' || hiRaw === '') throw new Error('已勾选“限定坐标范围”：请同时填写最小值和最大值；不想限范围就取消勾选');
+      const lo = Number(loRaw), hi = Number(hiRaw);
+      if (!Number.isFinite(lo) || !Number.isFinite(hi)) throw new Error('最小值和最大值都必须是有效数字');
+      if (lo === hi) throw new Error('最小值与最大值相等，已禁止生成；请让最小值严格小于最大值');
+      if (lo > hi) throw new Error('左侧最小值大于右侧最大值（左大右小），已禁止生成；请改成左小右大或交换两数');
+      xSampler = () => lo + Math.random() * (hi - lo);
+      ySampler = xSampler;
+      rangeText = `x、y 均匀随机于 [${lo}, ${hi}]`;
+    } else {
+      xSampler = gaussianRandom;
+      ySampler = gaussianRandom;
+      rangeText = 'x、y 按标准正态 N(0,1) 随机（未限定范围）';
+    }
+
+    const xs = sampleUniqueX(m, xSampler);
+    const pts = xs.map(x => [x, ySampler()]);
+    const order = document.getElementById('genOrder').value;
+    if (order === 'asc') pts.sort((a, b) => a[0] - b[0]);
+    if (order === 'desc') pts.sort((a, b) => b[0] - a[0]);
+    document.getElementById('points').value =
+      pts.map(p => `${p[0].toFixed(6)}, ${p[1].toFixed(6)}`).join('\n');
+    const orderText = order === 'asc' ? '按 x 递增填入' : order === 'desc' ? '按 x 递减填入（计算时仍自动升序）' : '保持随机顺序';
+    setGenMsg(`已生成 ${m} 个点：${rangeText}；${orderText}。确认后点“计算完整多项式”。`, true);
+  } catch (e){
+    setGenMsg(e.message, false);
+  }
+}
+document.getElementById('genRangeOn').addEventListener('change', syncGenRangeInputs);
+for (const rid of ['genMin', 'genMax']){
+  const rangeInput = document.getElementById(rid);
+  rangeInput.addEventListener('pointerdown', autoEnableGenRange);
+  rangeInput.addEventListener('focus', autoEnableGenRange);
+  rangeInput.addEventListener('input', autoEnableGenRange);
+}
+document.getElementById('genPoints').addEventListener('click', generateRandomPoints);
 
 </script>
 </body>
